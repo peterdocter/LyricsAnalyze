@@ -25,7 +25,20 @@ public abstract class LyricsFileReader {
 	 * @return
 	 */
 	public abstract LyricsInfo readFile(File file) throws Exception;
-
+	
+	/**
+	 * 读取歌词文本内容
+	 * 
+	 * @param base64FileContentString
+	 *            base64位文件内容
+	 * @param saveLrcFile
+	 *            要保存的歌词文件
+	 * @return
+	 * @throws Exception
+	 */
+	public abstract LyricsInfo readLrcText(String base64FileContentString,
+			File saveLrcFile) throws Exception;
+	
 	/**
 	 * 读取歌词文件
 	 * 

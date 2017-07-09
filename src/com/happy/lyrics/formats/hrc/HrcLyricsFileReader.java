@@ -1,7 +1,9 @@
 package com.happy.lyrics.formats.hrc;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import org.apache.commons.codec.binary.Base64;
 
 import com.happy.lyrics.LyricsFileReader;
 import com.happy.lyrics.model.LyricsInfo;
@@ -60,6 +64,21 @@ public class HrcLyricsFileReader extends LyricsFileReader {
 			return readInputStream(new FileInputStream(file));
 		}
 		return null;
+	}
+	
+	@Override
+	public LyricsInfo readLrcText(String base64FileContentString,
+			File saveLrcFile) throws Exception {
+		byte[] fileContent = Base64.decodeBase64(base64FileContentString);
+
+		if(saveLrcFile != null){
+			// 生成歌词文件
+			FileOutputStream os = new FileOutputStream(saveLrcFile);
+			os.write(fileContent);
+			os.close();
+		}
+		
+		return readInputStream(new ByteArrayInputStream(fileContent));
 	}
 
 	@Override
