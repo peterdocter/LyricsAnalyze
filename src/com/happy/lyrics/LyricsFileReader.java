@@ -38,7 +38,6 @@ public abstract class LyricsFileReader {
 	 */
 	public abstract LyricsInfo readLrcText(String base64FileContentString,
 			File saveLrcFile) throws Exception;
-	
 	/**
 	 * 读取歌词文件
 	 * 
