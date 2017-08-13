@@ -6,7 +6,7 @@ import java.io.FileInputStream;
 import org.apache.commons.codec.binary.Base64;
 
 import com.happy.lyrics.LyricsFileReader;
-import com.happy.lyrics.system.LyricsInfoIO;
+import com.happy.lyrics.utils.LyricsIOUtils;
 
 public class Test {
 
@@ -18,7 +18,7 @@ public class Test {
 		in.close();
 
 		String base64FileContentString = Base64.encodeBase64String(fileContent);
-		LyricsFileReader lyricsFileReader = LyricsInfoIO
+		LyricsFileReader lyricsFileReader = LyricsIOUtils
 				.getLyricsFileReader(lyricsfile);
 		lyricsFileReader.readLrcText(base64FileContentString, null);
 	}

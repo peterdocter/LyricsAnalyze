@@ -1,4 +1,4 @@
-package com.happy.lyrics.system;
+package com.happy.lyrics.utils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -17,11 +17,11 @@ import com.happy.lyrics.formats.ksc.KscLyricsFileWriter;
 import com.happy.lyrics.utils.FileUtils;
 
 /**
- * 
+ * 歌词io操作
  * @author zhangliangming
  * 
  */
-public class LyricsInfoIO {
+public class LyricsIOUtils {
 	private static ArrayList<LyricsFileReader> readers;
 	private static ArrayList<LyricsFileWriter> writers;
 
