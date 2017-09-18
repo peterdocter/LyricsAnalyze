@@ -54,8 +54,6 @@ public class KscLyricsFileReader extends LyricsFileReader {
 	public final static String LEGAL_TAG_PREFIX = "karaoke.tag";
 
 	public KscLyricsFileReader() {
-		// 设置编码
-		setDefaultCharset(Charset.forName("GB2312"));
 	}
 
 	@Override
@@ -65,20 +63,33 @@ public class KscLyricsFileReader extends LyricsFileReader {
 		}
 		return null;
 	}
-	
+
 	@Override
 	public LyricsInfo readLrcText(String base64FileContentString,
 			File saveLrcFile) throws Exception {
 		byte[] fileContent = Base64.decodeBase64(base64FileContentString);
 
-		if(saveLrcFile != null){
+		if (saveLrcFile != null) {
 			// 生成歌词文件
 			FileOutputStream os = new FileOutputStream(saveLrcFile);
 			os.write(fileContent);
 			os.close();
 		}
-		
+
 		return readInputStream(new ByteArrayInputStream(fileContent));
+	}
+
+	@Override
+	public LyricsInfo readLrcText(byte[] base64ByteArray, File saveLrcFile)
+			throws Exception {
+		if (saveLrcFile != null) {
+			// 生成歌词文件
+			FileOutputStream os = new FileOutputStream(saveLrcFile);
+			os.write(base64ByteArray);
+			os.close();
+		}
+
+		return readInputStream(new ByteArrayInputStream(base64ByteArray));
 	}
 
 	@Override
@@ -114,7 +125,7 @@ public class KscLyricsFileReader extends LyricsFileReader {
 			// 设置歌词的标签类
 			lyricsIfno.setLyricsTags(lyricsTags);
 			//
-			lyricsIfno.setLyricsLineInfos(lyricsLineInfos);
+			lyricsIfno.setLyricsLineInfoTreeMap(lyricsLineInfos);
 		}
 		return lyricsIfno;
 	}

@@ -1,55 +1,35 @@
 package com.happy.lyrics.model;
 
+import java.util.List;
+
 /**
- * 歌词行数据
+ * 动感歌词实体类
  * 
  * @author zhangliangming
- * 
  */
-public class LyricsLineInfo {
-	/**
-	 * 歌词开始时间
-	 */
-	private int startTime = 0;
-	/**
-	 * 歌词结束时间
-	 */
-	private int endTime = 0;
-	/**
-	 * 该行歌词
-	 */
-	private String lineLyrics = null;
+public class LyricsLineInfo extends LrcLyricsLineInfo {
+
 	/**
 	 * 歌词数组，用来分隔每个歌词
 	 */
-	public String[] lyricsWords = null;
+	public String[] lyricsWords;
 	/**
 	 * 数组，用来存放每个歌词的时间
 	 */
-	public int[] wordsDisInterval = null;
+	private int[] wordsDisInterval;
 
-	public int getStartTime() {
-		return startTime;
+	/**
+	 * 分割歌词行歌词
+	 */
+	private List<LyricsLineInfo> splitLyricsLineInfos;
+
+	public List<LyricsLineInfo> getSplitLyricsLineInfos() {
+		return splitLyricsLineInfos;
 	}
 
-	public void setStartTime(int startTime) {
-		this.startTime = startTime;
-	}
-
-	public int getEndTime() {
-		return endTime;
-	}
-
-	public void setEndTime(int endTime) {
-		this.endTime = endTime;
-	}
-
-	public String getLineLyrics() {
-		return lineLyrics;
-	}
-
-	public void setLineLyrics(String lineLyrics) {
-		this.lineLyrics = lineLyrics;
+	public void setSplitLyricsLineInfos(
+			List<LyricsLineInfo> splitLyricsLineInfos) {
+		this.splitLyricsLineInfos = splitLyricsLineInfos;
 	}
 
 	public String[] getLyricsWords() {
@@ -57,6 +37,10 @@ public class LyricsLineInfo {
 	}
 
 	public void setLyricsWords(String[] lyricsWords) {
+		for (int i = 0; i < lyricsWords.length; i++) {
+			lyricsWords[i] = lyricsWords[i].replaceAll("\r", "");
+		}
+
 		this.lyricsWords = lyricsWords;
 	}
 
@@ -68,4 +52,21 @@ public class LyricsLineInfo {
 		this.wordsDisInterval = wordsDisInterval;
 	}
 
+	/**
+	 * 复制
+	 * 
+	 * @param dist
+	 *            要复制的实体类
+	 * @param orig
+	 *            原始实体类
+	 */
+	public void copy(LyricsLineInfo dist, LyricsLineInfo orig) {
+
+		dist.setWordsDisInterval(orig.getWordsDisInterval());
+		dist.setStartTime(orig.getStartTime());
+		dist.setEndTime(orig.getEndTime());
+		dist.setLyricsWords(orig.getLyricsWords());
+		dist.setLineLyrics(orig.getLineLyrics());
+
+	}
 }

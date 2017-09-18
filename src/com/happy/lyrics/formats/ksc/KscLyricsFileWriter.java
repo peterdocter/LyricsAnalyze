@@ -47,8 +47,6 @@ public class KscLyricsFileWriter extends LyricsFileWriter {
 	public final static String LEGAL_TAG_PREFIX = "karaoke.tag";
 
 	public KscLyricsFileWriter() {
-		// 设置编码
-		setDefaultCharset(Charset.forName("GB2312"));
 	}
 
 	private String parseLyricsInfo(LyricsInfo lyricsIfno) throws Exception {
@@ -71,7 +69,7 @@ public class KscLyricsFileWriter extends LyricsFileWriter {
 		}
 		// 每行歌词内容
 		TreeMap<Integer, LyricsLineInfo> lyricsLineInfos = lyricsIfno
-				.getLyricsLineInfos();
+				.getLyricsLineInfoTreeMap();
 		for (int i = 0; i < lyricsLineInfos.size(); i++) {
 			LyricsLineInfo lyricsLineInfo = lyricsLineInfos.get(i);
 

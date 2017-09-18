@@ -2,7 +2,6 @@ package com.happy.lyrics.formats.hrcx;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -11,10 +10,16 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.TreeMap;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.commons.codec.binary.Base64;
+
 import com.happy.lyrics.LyricsFileWriter;
 import com.happy.lyrics.model.LyricsInfo;
 import com.happy.lyrics.model.LyricsLineInfo;
 import com.happy.lyrics.model.LyricsTag;
+import com.happy.lyrics.model.TranslateLrcLineInfo;
 import com.happy.lyrics.utils.CharUtils;
 import com.happy.lyrics.utils.StringCompressUtils;
 
@@ -54,10 +59,12 @@ public class HrcxLyricsFileWriter extends LyricsFileWriter {
 	 * 歌词 字符串
 	 */
 	public final static String LEGAL_LYRICS_LINE_PREFIX = "haplayer.lrc";
+	/**
+	 * 额外歌词
+	 */
+	private final static String LEGAL_EXTRA_LYRICS_PREFIX = "haplayer.extra.lrc";
 
 	public HrcxLyricsFileWriter() {
-		// 设置编码
-		setDefaultCharset(Charset.forName("utf-8"));
 	}
 
 	@Override
@@ -113,9 +120,71 @@ public class HrcxLyricsFileWriter extends LyricsFileWriter {
 			}
 			lyricsCom += val + "];\n";
 		}
+		
+		// 获取额外歌词行（翻译歌词和音译歌词）
+		JSONObject extraLyricsObj = new JSONObject();
+		JSONArray contentArray = new JSONArray();
+		// 判断是否有翻译歌词
+		if (lyricsIfno.getTranslateLyricsInfo() != null) {
+			List<TranslateLrcLineInfo> translateLrcLineInfos = lyricsIfno
+					.getTranslateLyricsInfo().getTranslateLrcLineInfos();
+			if (translateLrcLineInfos != null
+					&& translateLrcLineInfos.size() > 0) {
+				JSONObject lyricsObj = new JSONObject();
+				JSONArray lyricContentArray = new JSONArray();
+				lyricsObj.put("lyricType", 1);
+				for (int i = 0; i < translateLrcLineInfos.size(); i++) {
+					JSONArray lyricArray = new JSONArray();
+					TranslateLrcLineInfo translateLrcLineInfo = translateLrcLineInfos
+							.get(i);
+					lyricArray.add(translateLrcLineInfo.getLineLyrics());
+					lyricContentArray.add(lyricArray);
+				}
+				if (lyricContentArray.size() > 0) {
+					lyricsObj.put("lyricContent", lyricContentArray);
+					contentArray.add(lyricsObj);
+				}
+
+			}
+		}
+
+		// 判断是否有音译歌词
+		if (lyricsIfno.getTransliterationLyricsInfo() != null) {
+			List<LyricsLineInfo> lyricsLineInfos = lyricsIfno
+					.getTransliterationLyricsInfo()
+					.getTransliterationLrcLineInfos();
+			if (lyricsLineInfos != null && lyricsLineInfos.size() > 0) {
+				JSONObject lyricsObj = new JSONObject();
+				JSONArray lyricContentArray = new JSONArray();
+				lyricsObj.put("lyricType", 0);
+				for (int i = 0; i < lyricsLineInfos.size(); i++) {
+
+					LyricsLineInfo lyricsLineInfo = lyricsLineInfos.get(i);
+					String[] lyricsWords = lyricsLineInfo.getLyricsWords();
+					JSONArray lyricArray = new JSONArray();
+					for (int j = 0; j < lyricsWords.length; j++) {
+						lyricArray.add(lyricsWords[j].trim());
+					}
+					lyricContentArray.add(lyricArray);
+				}
+				if (lyricContentArray.size() > 0) {
+					lyricsObj.put("lyricContent", lyricContentArray);
+					contentArray.add(lyricsObj);
+				}
+			}
+		}
+		//
+		extraLyricsObj.put("content", contentArray);
+		// 添加翻译和音译歌词
+		lyricsCom += LEGAL_EXTRA_LYRICS_PREFIX
+				+ "('"
+				+ Base64.encodeBase64String(extraLyricsObj.toString()
+						.getBytes()) + "');\n";
+		
+		
 		// 每行歌词内容
 		TreeMap<Integer, LyricsLineInfo> lyricsLineInfos = lyricsIfno
-				.getLyricsLineInfos();
+				.getLyricsLineInfoTreeMap();
 		// 将每行歌词，放到有序的map，判断已重复的歌词
 		LinkedHashMap<String, List<Integer>> lyricsLineInfoMapResult = new LinkedHashMap<String, List<Integer>>();
 		for (int i = 0; i < lyricsLineInfos.size(); i++) {
@@ -181,7 +250,8 @@ public class HrcxLyricsFileWriter extends LyricsFileWriter {
 		String temp = "";
 		for (int i = 0; i < lrcComTxt.length(); i++) {
 			char c = lrcComTxt.charAt(i);
-			if (CharUtils.isChinese(c)) {
+			if (CharUtils.isChinese(c) || CharUtils.isChinese(c) || CharUtils.isHangulSyllables(c)
+					|| CharUtils.isHiragana(c)) {
 
 				if (!temp.equals("")) {
 					lrcStack.push(temp);

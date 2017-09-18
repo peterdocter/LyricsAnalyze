@@ -3,13 +3,20 @@ package com.happy.lyrics.formats.krc;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.commons.codec.binary.Base64;
 
 import com.happy.lyrics.LyricsFileWriter;
 import com.happy.lyrics.model.LyricsInfo;
 import com.happy.lyrics.model.LyricsLineInfo;
 import com.happy.lyrics.model.LyricsTag;
+import com.happy.lyrics.model.TranslateLrcLineInfo;
 import com.happy.lyrics.utils.StringCompressUtils;
 
 /**
@@ -32,14 +39,16 @@ public class KrcLyricsFileWriter extends LyricsFileWriter {
 	 */
 	private final static String LEGAL_OFFSET_PREFIX = "[offset:";
 	/**
+	 * 额外歌词字符串
+	 */
+	private final static String LEGAL_LANGUAGE_PREFIX = "[language:";
+	/**
 	 * 解码参数
 	 */
 	private static final char[] key = { '@', 'G', 'a', 'w', '^', '2', 't', 'G',
 			'Q', '6', '1', '-', 'Î', 'Ò', 'n', 'i' };
 
 	public KrcLyricsFileWriter() {
-		// 设置编码
-		setDefaultCharset(Charset.forName("utf-8"));
 	}
 
 	private String parseLyricsInfo(LyricsInfo lyricsIfno) throws Exception {
@@ -60,9 +69,68 @@ public class KrcLyricsFileWriter extends LyricsFileWriter {
 			lyricsCom += val + "]\n";
 		}
 
+		JSONObject extraLyricsObj = new JSONObject();
+		JSONArray contentArray = new JSONArray();
+		// 判断是否有翻译歌词
+		if (lyricsIfno.getTranslateLyricsInfo() != null) {
+			List<TranslateLrcLineInfo> translateLrcLineInfos = lyricsIfno
+					.getTranslateLyricsInfo().getTranslateLrcLineInfos();
+			if (translateLrcLineInfos != null
+					&& translateLrcLineInfos.size() > 0) {
+				JSONObject lyricsObj = new JSONObject();
+				JSONArray lyricContentArray = new JSONArray();
+				lyricsObj.put("language", 0);
+				lyricsObj.put("type", 1);
+				for (int i = 0; i < translateLrcLineInfos.size(); i++) {
+					JSONArray lyricArray = new JSONArray();
+					TranslateLrcLineInfo translateLrcLineInfo = translateLrcLineInfos
+							.get(i);
+					lyricArray.add(translateLrcLineInfo.getLineLyrics());
+					lyricContentArray.add(lyricArray);
+				}
+				if (lyricContentArray.size() > 0) {
+					lyricsObj.put("lyricContent", lyricContentArray);
+					contentArray.add(lyricsObj);
+				}
+
+			}
+		}
+		// 判断是否有音译歌词
+		if (lyricsIfno.getTransliterationLyricsInfo() != null) {
+			List<LyricsLineInfo> lyricsLineInfos = lyricsIfno
+					.getTransliterationLyricsInfo()
+					.getTransliterationLrcLineInfos();
+			if (lyricsLineInfos != null && lyricsLineInfos.size() > 0) {
+				JSONObject lyricsObj = new JSONObject();
+				JSONArray lyricContentArray = new JSONArray();
+				lyricsObj.put("language", 0);
+				lyricsObj.put("type", 0);
+				for (int i = 0; i < lyricsLineInfos.size(); i++) {
+
+					LyricsLineInfo lyricsLineInfo = lyricsLineInfos.get(i);
+					String[] lyricsWords = lyricsLineInfo.getLyricsWords();
+					JSONArray lyricArray = new JSONArray();
+					for (int j = 0; j < lyricsWords.length; j++) {
+						lyricArray.add(lyricsWords[j].trim());
+					}
+					lyricContentArray.add(lyricArray);
+				}
+				if (lyricContentArray.size() > 0) {
+					lyricsObj.put("lyricContent", lyricContentArray);
+					contentArray.add(lyricsObj);
+				}
+			}
+		}
+		//
+		extraLyricsObj.put("content", contentArray);
+		// 添加翻译和音译歌词
+		lyricsCom += LEGAL_LANGUAGE_PREFIX
+				+ Base64.encodeBase64String(extraLyricsObj.toString()
+						.getBytes()) + "]\n";
+
 		// [1679,1550]<0,399,0>作<399,200,0>词<599,250,0>：<849,301,0>李<1150,400,0>健
 		TreeMap<Integer, LyricsLineInfo> lyricsLineInfos = lyricsIfno
-				.getLyricsLineInfos();
+				.getLyricsLineInfoTreeMap();
 		// 每行歌词内容
 		for (int i = 0; i < lyricsLineInfos.size(); i++) {
 			LyricsLineInfo lyricsLineInfo = lyricsLineInfos.get(i);

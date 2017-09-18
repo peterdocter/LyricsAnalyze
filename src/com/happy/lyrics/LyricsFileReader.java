@@ -16,7 +16,7 @@ public abstract class LyricsFileReader {
 	/**
 	 * 默认编码
 	 */
-	protected Charset defaultCharset = Charset.forName("iso8859-1");
+	protected Charset defaultCharset = Charset.forName("utf-8");
 
 	/**
 	 * 读取歌词文件
@@ -37,6 +37,15 @@ public abstract class LyricsFileReader {
 	 * @throws Exception
 	 */
 	public abstract LyricsInfo readLrcText(String base64FileContentString,
+			File saveLrcFile) throws Exception;
+	/**
+	 * 读取歌词文本内容
+	 * @param base64ByteArray base64内容数组
+	 * @param saveLrcFile
+	 * @return
+	 * @throws Exception
+	 */
+	public abstract LyricsInfo readLrcText(byte[] base64ByteArray,
 			File saveLrcFile) throws Exception;
 	
 	/**

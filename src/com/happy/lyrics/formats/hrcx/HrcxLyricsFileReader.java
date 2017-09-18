@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,12 +13,19 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
+
 import org.apache.commons.codec.binary.Base64;
 
 import com.happy.lyrics.LyricsFileReader;
 import com.happy.lyrics.model.LyricsInfo;
 import com.happy.lyrics.model.LyricsLineInfo;
 import com.happy.lyrics.model.LyricsTag;
+import com.happy.lyrics.model.TranslateLrcLineInfo;
+import com.happy.lyrics.model.TranslateLyricsInfo;
+import com.happy.lyrics.model.TransliterationLyricsInfo;
 import com.happy.lyrics.utils.CharUtils;
 import com.happy.lyrics.utils.StringCompressUtils;
 import com.happy.lyrics.utils.StringUtils;
@@ -60,10 +66,12 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 	 * 歌词 字符串
 	 */
 	public final static String LEGAL_LYRICS_LINE_PREFIX = "haplayer.lrc";
+	/**
+	 * 额外歌词
+	 */
+	private final static String LEGAL_EXTRA_LYRICS_PREFIX = "haplayer.extra.lrc";
 
 	public HrcxLyricsFileReader() {
-		// 设置编码
-		setDefaultCharset(Charset.forName("utf-8"));
 	}
 
 	@Override
@@ -73,20 +81,33 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 		}
 		return null;
 	}
-	
+
 	@Override
 	public LyricsInfo readLrcText(String base64FileContentString,
 			File saveLrcFile) throws Exception {
 		byte[] fileContent = Base64.decodeBase64(base64FileContentString);
 
-		if(saveLrcFile != null){
+		if (saveLrcFile != null) {
 			// 生成歌词文件
 			FileOutputStream os = new FileOutputStream(saveLrcFile);
 			os.write(fileContent);
 			os.close();
 		}
-		
+
 		return readInputStream(new ByteArrayInputStream(fileContent));
+	}
+
+	@Override
+	public LyricsInfo readLrcText(byte[] base64ByteArray, File saveLrcFile)
+			throws Exception {
+		if (saveLrcFile != null) {
+			// 生成歌词文件
+			FileOutputStream os = new FileOutputStream(saveLrcFile);
+			os.write(base64ByteArray);
+			os.close();
+		}
+
+		return readInputStream(new ByteArrayInputStream(base64ByteArray));
 	}
 
 	@Override
@@ -105,8 +126,8 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 			for (int i = 0; i < lyricsTexts.length; i++) {
 				try {
 					// 解析歌词
-					parserLineInfos(lyricsLineInfosTemp, lyricsTags,
-							lyricsTexts[i]);
+					parserLineInfos(lyricsIfno, lyricsLineInfosTemp,
+							lyricsTags, lyricsTexts[i]);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -123,7 +144,7 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 			// 设置歌词的标签类
 			lyricsIfno.setLyricsTags(lyricsTags);
 			//
-			lyricsIfno.setLyricsLineInfos(lyricsLineInfos);
+			lyricsIfno.setLyricsLineInfoTreeMap(lyricsLineInfos);
 		}
 		return lyricsIfno;
 	}
@@ -135,7 +156,7 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 	 * @param lyricsTags
 	 * @param string
 	 */
-	private void parserLineInfos(
+	private void parserLineInfos(LyricsInfo lyricsIfno,
 			SortedMap<Integer, LyricsLineInfo> lyricsLineInfos,
 			Map<String, Object> lyricsTags, String lineInfo) {
 		if (lineInfo.startsWith(LEGAL_TITLE_PREFIX)) {
@@ -180,7 +201,27 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 			int end = lineInfo.lastIndexOf("]");
 			String tagValue = lineInfo.substring(start, end);
 			String temp[] = tagValue.split(":");
-			lyricsTags.put(temp[0], temp[1]);
+			lyricsTags.put(temp[0], temp.length == 1 ? "" : temp[1]);
+
+		} else if (lineInfo.startsWith(LEGAL_EXTRA_LYRICS_PREFIX)) {
+			int left = LEGAL_EXTRA_LYRICS_PREFIX.length() + 1;
+			int right = lineInfo.length();
+
+			// 解析翻译歌词
+			// 获取json base64字符串
+			String translateJsonBase64String = lineInfo.substring(left + 1,
+					right - 3);
+			if (!translateJsonBase64String.equals("")) {
+				try {
+					//
+					String translateJsonString = new String(
+							Base64.decodeBase64(translateJsonBase64String));
+					parserOtherLrc(lyricsIfno, translateJsonString);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+			}
 
 		} else if (lineInfo.startsWith(LEGAL_LYRICS_LINE_PREFIX)) {
 			int left = LEGAL_LYRICS_LINE_PREFIX.length() + 1;
@@ -213,6 +254,113 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 					timeTexts, wordsDisIntervalTexts);
 		}
 
+	}
+
+	/**
+	 * 解析翻译和音译歌词
+	 * 
+	 * @param lyricsIfno
+	 * @param translateJsonString
+	 */
+	private void parserOtherLrc(LyricsInfo lyricsIfno,
+			String translateJsonString) throws Exception {
+
+		try {
+
+			JSONObject resultObj = JSONObject.fromObject(translateJsonString);
+			JSONArray contentArrayObj = resultObj.getJSONArray("content");
+			for (int i = 0; i < contentArrayObj.size(); i++) {
+				JSONObject dataObj = contentArrayObj.getJSONObject(i);
+				JSONArray lyricContentArrayObj = dataObj
+						.getJSONArray("lyricContent");
+				int type = dataObj.getInt("lyricType");
+				if (type == 1) {
+					// 解析翻译歌词
+					if (lyricsIfno.getTranslateLyricsInfo() == null)
+						parserTranslateLrc(lyricsIfno, lyricContentArrayObj);
+
+				} else if (type == 0) {
+					// 解析音译歌词
+					if (lyricsIfno.getTransliterationLyricsInfo() == null)
+						parserTransliterationLrc(lyricsIfno,
+								lyricContentArrayObj);
+				}
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 解析音译歌词
+	 * 
+	 * @param lyricsIfno
+	 * @param lyricContentArrayObj
+	 */
+	private void parserTransliterationLrc(LyricsInfo lyricsIfno,
+			JSONArray lyricContentArrayObj) throws Exception {
+
+		// 音译歌词集合
+		TransliterationLyricsInfo transliterationLyricsInfo = new TransliterationLyricsInfo();
+		List<LyricsLineInfo> transliterationLrcLineInfos = new ArrayList<LyricsLineInfo>();
+		// 获取歌词内容
+		for (int j = 0; j < lyricContentArrayObj.size(); j++) {
+			JSONArray lrcDataArrayObj = lyricContentArrayObj.getJSONArray(j);
+			// 音译行歌词
+			LyricsLineInfo transliterationLrcLineInfo = new LyricsLineInfo();
+			String[] lyricsWords = new String[lrcDataArrayObj.size()];
+			String lineLyrics = "";
+			for (int k = 0; k < lrcDataArrayObj.size(); k++) {
+				if (k == lrcDataArrayObj.size() - 1) {
+					lyricsWords[k] = lrcDataArrayObj.getString(k).trim();
+					lineLyrics += lrcDataArrayObj.getString(k).trim();
+				} else {
+					lyricsWords[k] = lrcDataArrayObj.getString(k).trim() + " ";
+					lineLyrics += lrcDataArrayObj.getString(k).trim() + " ";
+				}
+			}
+			transliterationLrcLineInfo.setLineLyrics(lineLyrics);
+			transliterationLrcLineInfo.setLyricsWords(lyricsWords);
+
+			transliterationLrcLineInfos.add(transliterationLrcLineInfo);
+		}
+		// 添加音译歌词
+		if (transliterationLrcLineInfos.size() > 0) {
+			transliterationLyricsInfo
+					.setTransliterationLrcLineInfos(transliterationLrcLineInfos);
+			lyricsIfno.setTransliterationLyricsInfo(transliterationLyricsInfo);
+		}
+	}
+
+	/**
+	 * 解析翻译歌词
+	 * 
+	 * @param lyricsIfno
+	 * @param lyricContentArrayObj
+	 */
+	private void parserTranslateLrc(LyricsInfo lyricsIfno,
+			JSONArray lyricContentArrayObj) throws Exception {
+
+		// 翻译歌词集合
+		TranslateLyricsInfo translateLyricsInfo = new TranslateLyricsInfo();
+		List<TranslateLrcLineInfo> translateLrcLineInfos = new ArrayList<TranslateLrcLineInfo>();
+
+		// 获取歌词内容
+		for (int j = 0; j < lyricContentArrayObj.size(); j++) {
+			JSONArray lrcDataArrayObj = lyricContentArrayObj.getJSONArray(j);
+			String lrcComtext = lrcDataArrayObj.getString(0);
+
+			// 翻译行歌词
+			TranslateLrcLineInfo translateLrcLineInfo = new TranslateLrcLineInfo();
+			translateLrcLineInfo.setLineLyrics(lrcComtext);
+
+			translateLrcLineInfos.add(translateLrcLineInfo);
+		}
+		// 添加翻译歌词
+		if (translateLrcLineInfos.size() > 0) {
+			translateLyricsInfo.setTranslateLrcLineInfos(translateLrcLineInfos);
+			lyricsIfno.setTranslateLyricsInfo(translateLyricsInfo);
+		}
 	}
 
 	/**
@@ -345,7 +493,8 @@ public class HrcxLyricsFileReader extends LyricsFileReader {
 		boolean isEnter = false;
 		for (int i = 0; i < lineLyricsStr.length(); i++) {
 			char c = lineLyricsStr.charAt(i);
-			if (CharUtils.isChinese(c)
+			if (CharUtils.isChinese(c) || CharUtils.isHangulSyllables(c)
+					|| CharUtils.isHiragana(c)
 					|| (!CharUtils.isWord(c) && c != '[' && c != ']')) {
 				if (isEnter) {
 					temp += String.valueOf(lineLyricsStr.charAt(i));
