@@ -6,7 +6,11 @@ import com.happy.lyrics.LyricsFileReader;
 import com.happy.lyrics.model.LyricsInfo;
 import com.happy.lyrics.utils.LyricsIOUtils;
 
-
+/**
+ * 暂时支持
+ * @author zhangliangming
+ *
+ */
 public class Test {
 
 	public static void main(String[] args) throws Exception {
