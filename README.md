@@ -16,3 +16,7 @@
 
 # hrcx (happy lyrics)歌词
 hrc的简化和优化
+# android版本播放器 #
+链接：https://github.com/zhangliangming/HappyPlayer5.git
+# PC版本播放器 #
+链接：https://github.com/zhangliangming/HappyPlayer-PC.git
