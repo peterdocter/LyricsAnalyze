@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
@@ -110,7 +109,8 @@ public class KscLyricsFileWriter extends LyricsFileWriter {
 		String temp = "";
 		for (int i = 0; i < lrcComTxt.length(); i++) {
 			char c = lrcComTxt.charAt(i);
-			if (CharUtils.isChinese(c)) {
+			if (CharUtils.isChinese(c) || CharUtils.isHangulSyllables(c)
+					|| CharUtils.isHiragana(c)) {
 
 				if (!temp.equals("")) {
 					lrcStack.push(temp);

@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -277,7 +276,8 @@ public class KscLyricsFileReader extends LyricsFileReader {
 		boolean isEnter = false;
 		for (int i = 0; i < lineLyricsStr.length(); i++) {
 			char c = lineLyricsStr.charAt(i);
-			if (CharUtils.isChinese(c)
+			if (CharUtils.isChinese(c) || CharUtils.isHangulSyllables(c)
+					|| CharUtils.isHiragana(c)
 					|| (!CharUtils.isWord(c) && c != '[' && c != ']')) {
 				if (isEnter) {
 					temp += String.valueOf(lineLyricsStr.charAt(i));
